@@ -1,0 +1,229 @@
+`timescale 1ns / 1ps
+/////////////////////////////////////////
+//Part-1
+
+//Q1) ii)
+module mux_2x1_behavioural(  //behavioural model  
+input a, b, sel,
+output reg y
+    );
+    always@(*)
+    begin
+        if(sel == 1'b1)
+            y = b;
+        else
+            y = a;
+    end
+endmodule
+
+//Q1) i)
+
+module mux_2x1_structural(    //structural model of 2x1 multiplexer using only NAND Gates  
+input a, b, sel,
+output y
+    );
+    wire w1, w2;
+    nand(w1, ~sel, a);
+    nand(w2, sel, b);
+    nand(y, w1, w2);
+    
+endmodule
+
+
+module mux_4x1_structural(    //structural model of 2x1 multiplexer using only NAND Gates
+input a, b, c, d, 
+input [1:0] sel,
+output y
+    );
+    wire w1, w2;
+    mux_2x1_structural M1(a, b, sel[0], w1);
+    mux_2x1_structural M2(c, d, sel[0], w2);
+    mux_2x1_structural M3(w1, w2, sel[1], y);
+endmodule
+
+module mux_8x1_structural(    //structural model of 2x1 multiplexer using only NAND Gates
+input a, b, c, d, e, f, g, h, 
+input [2:0] sel,
+output y
+    );
+    wire w1, w2;
+    mux_4x1_structural M1(a, b, c, d,  sel[1:0], w1);
+    mux_4x1_structural M2(e, f, g, h, sel[1:0], w2);
+    mux_2x1_structural M3(w1, w2, sel[2], y);
+endmodule
+
+
+module mux_16x1_structural(    //structural model of 2x1 multiplexer using only NAND Gates
+input [15:0] a, 
+input [3:0] sel,
+output y
+    );
+    wire w1, w2;
+    mux_8x1_structural M1(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], sel[2:0], w1);
+    mux_8x1_structural M2(a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15], sel[2:0], w2);
+    mux_2x1_structural M3(w1, w2, sel[3], y);
+endmodule
+
+
+module mux_32x1_structural(    //structural model of 2x1 multiplexer using only NAND Gates
+input [31:0] a, 
+input [4:0] sel,
+output y
+    );
+    wire w1, w2;
+    mux_16x1_structural M1(a[15:0], sel[3:0], w1);
+    mux_16x1_structural M2(a[31:16], sel[3:0], w2);
+    mux_2x1_structural M3(w1, w2, sel[4], y);
+endmodule
+
+//Part-2
+//Q1) ii)
+module jk_behavioural(
+input j, k, clk,
+output reg q
+);
+always@(posedge clk)
+begin
+    if(!q)
+        q <= j;
+    else
+        q <= ~k;
+end
+endmodule
+
+//4-bit synchronous counter
+
+module counter_4_bit(
+input clk,
+output [3:0] q
+);
+jk_behavioural j1(1'b1, 1'b1, clk, q[0]);
+jk_behavioural j2(q[0], q[0], clk, q[1]);
+jk_behavioural j3((q[0] & q[1]), (q[0] & q[1]), clk, q[2]);
+jk_behavioural j4((q[0] & q[1] & q[2]), (q[0] & q[1] & q[2]), clk, q[3]);
+endmodule
+
+//Q1) i)
+module jk_structural(
+input j, k, clk,
+output reg q
+);
+wire w1, w2, w3, w4;
+assign w3 = ~q;
+assign w4 = q;
+    nand_gate_3in N1(j, ~q, clk, w1);
+    nand_gate_3in N2(k, q, clk, w2);
+    nand          N3(w4, w1, w3);
+    nand          N4(w3, q, w2);
+endmodule
+
+module nand_gate_3in( a, b, c, y);
+     input   a;
+     input   b;
+     input   c; 
+     output y;
+assign y = ~(a & b & c);
+endmodule
+
+module upcounter_testbench();
+reg clk;
+wire [3:0] q;
+ 
+counter_4_bit dut(clk, q);
+initial begin 
+clk=0;
+forever #5 clk=~clk;
+end
+endmodule
+
+module jk_ff_testbench();
+reg clk, j, k;
+wire q;
+ 
+ jk_behavioural dut(j, k, clk, q);
+initial begin
+j=0;
+k=0;
+clk=0;
+#10
+j=1;
+k=0;
+#10
+j=0;
+k=1;
+#10
+j=1;
+k=1;
+end
+always #5 clk=~clk;
+endmodule
+
+
+module mux_32x1_testbench();
+reg [31:0]a;
+reg [4:0] sel;
+wire y;
+integer i;
+mux_32x1_structural dut(a, sel, y);
+initial begin
+    a= 32'h865346bd;
+    for(i=0;i<32;i=i+1)
+    begin
+        sel = i;
+        #10;
+    end
+end
+endmodule
+
+module mux_2x1_testbench_structural();
+reg a, b;
+reg sel;
+wire y;
+mux_2x1_structural dut(a, b, sel, y);
+initial begin
+  a=0;
+  b=0;
+  sel=0;
+  #10
+  a=0;
+  b=1;
+  sel=1;
+  #10
+  a=1;
+  b=0;
+  sel=0;
+  #10
+  a=1;
+  b=1;
+  sel=1;
+  
+end
+
+
+endmodule
+
+
+module mux_2x1_testbench_behavioural();
+reg a, b;
+reg sel;
+wire y;
+mux_2x1_behavioural dut(a, b, sel, y);
+initial begin
+  a=0;
+  b=0;
+  sel=0;
+  #10
+  a=0;
+  b=1;
+  sel=1;
+  #10
+  a=1;
+  b=0;
+  sel=0;
+  #10
+  a=1;
+  b=1;
+  sel=1;
+ 
+end
+endmodule
